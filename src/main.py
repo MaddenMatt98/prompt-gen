@@ -17,6 +17,8 @@ MD_PROMPT = """#Context
 *You MUST generate prompts in markdown format.
 *You MUST include a summary section in generated prompts.
 *You MUST provide specific instructions in generated prompts.
+*You WILL NOT provide a sample implementation.
+*You WILL provide sample input and output.
 """
 
 GITHUB_URL = "https://api.githubcopilot.com/chat/completions"
