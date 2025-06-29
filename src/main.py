@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import FastAPI, Header
+from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 from pydantic import BaseModel
 
@@ -22,12 +23,10 @@ GITHUB_URL = "https://api.githubcopilot.com/chat/completions"
 
 
 class PromptRequest(BaseModel):
-    messages: list["PromptMessages"]
+    messages: list[dict]
 
 
-class PromptMessages(BaseModel):
-    role: str
-    content: str
+#TODO: Add a model for messages here.
 
 
 app = FastAPI()
@@ -42,7 +41,7 @@ def root():
 async def post(
     x_github_token: Annotated[str | None, Header()],
     prompt_request: PromptRequest,
-):
+) -> StreamingResponse:
     messages = prompt_request.messages
 
     messages.insert(
@@ -52,9 +51,16 @@ async def post(
             "content": MD_PROMPT
         }
     )
+    
+    return StreamingResponse(
+        event_stream(x_github_token, messages),
+        media_type="application/json"
+    )
 
+
+async def event_stream(x_github_token: str, messages: list[dict]):
     headers = {
-        'Authorization': f'Bearer {x_github_token}',
+        'Authorization': x_github_token,
         'Content-Type': 'application/json'
     }
     body = {
@@ -63,4 +69,5 @@ async def post(
     }
     async with AsyncClient() as client:
         async with client.stream("POST", GITHUB_URL, headers=headers, json=body) as response:
-            pass
+            async for chunk in response.aiter_bytes():
+                yield chunk
